@@ -19,7 +19,7 @@ void output_pgf(unsigned char* pixels, int width, int height, int pitch)
 			unsigned char pixel = pixels[y * pitch + x];
 
 			if (!(pixel & 0xBF))
-				printf("\\filldraw (%d, -%d) rectangle ++(1, -1);\n", x, y);
+				printf("\\fill (%d, -%d) rectangle ++(1, -1);\n", x, y);
 		}
 	}
 }
