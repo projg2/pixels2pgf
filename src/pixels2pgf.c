@@ -13,6 +13,8 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
+int horiz_join = 0;
+
 void output_pgf(unsigned char* pixels, int width, int height, int pitch)
 {
 	int y, x;
@@ -25,6 +27,29 @@ void output_pgf(unsigned char* pixels, int width, int height, int pitch)
 
 			if (!(pixel & 0xBF))
 				printf("\\fill (%d, -%d) rectangle ++(1, -1);\n", x, y);
+		}
+	}
+}
+
+void output_pgf_horizjoin(unsigned char* pixels, int width, int height, int pitch)
+{
+	int y, x;
+	int horiz_count = 0;
+
+	for (y = 0; y < height; ++y)
+	{
+		for (x = 0; x <= width; ++x)
+		{
+			unsigned char pixel = x < width ? pixels[y * pitch + x] : 1;
+
+			if (!(pixel & 0xBF))
+				++horiz_count;
+			if ((pixel & 0xBF) && horiz_count)
+			{
+				printf("\\fill (%d, -%d) rectangle ++(%d, -1);\n",
+						x - horiz_count, y, horiz_count);
+				horiz_count = 0;
+			}
 		}
 	}
 }
@@ -59,14 +84,19 @@ int process(SDL_Surface* input)
 		return 1;
 	}
 
-	output_pgf(image->pixels, image->w, image->h, image->pitch);
+	if (!horiz_join)
+		output_pgf(image->pixels, image->w, image->h, image->pitch);
+	else
+		output_pgf_horizjoin(image->pixels, image->w, image->h, image->pitch);
 
 	SDL_FreeSurface(image);
 	return 0;
 }
 
 const struct option long_opts[] = {
-	{ "help", no_argument, 0, 'h' },
+	{ "horizontal-join", no_argument, 0, 'h' },
+
+	{ "help", no_argument, 0, 'H' },
 	{ "version", no_argument, 0, 'V' },
 
 	{ 0, 0, 0, 0 }
@@ -81,6 +111,8 @@ void print_help(FILE* f, const char* self)
 "Outputs to stdout.\n"
 "\n"
 "Options:\n"
+"	-h, --horiz	join adjacent pixels horizontally\n"
+"\n"
 "	--help		output this help message\n"
 "	--version	output program version\n",
 			self);
@@ -90,14 +122,18 @@ int main(int argc, char* argv[])
 {
 	int opt, ret;
 
-	while ((opt = getopt_long(argc, argv, "hV", long_opts, NULL)) != -1)
+	while ((opt = getopt_long(argc, argv, "hHV", long_opts, NULL)) != -1)
 	{
 		switch (opt)
 		{
+			case 'h':
+				horiz_join = 1;
+				break;
+
 			case 'V':
 				printf("%s-%s\n", PACKAGE_NAME, PACKAGE_VERSION);
 				return 0;
-			case 'h':
+			case 'H':
 				print_help(stdout, argv[0]);
 				return 0;
 			default:
