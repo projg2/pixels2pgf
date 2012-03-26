@@ -14,6 +14,7 @@
 #include <SDL_image.h>
 
 int horiz_join = 0;
+int vert_join = 0;
 
 void output_pgf(unsigned char* pixels, int width, int height, int pitch)
 {
@@ -54,6 +55,29 @@ void output_pgf_horizjoin(unsigned char* pixels, int width, int height, int pitc
 	}
 }
 
+void output_pgf_vertjoin(unsigned char* pixels, int width, int height, int pitch)
+{
+	int x, y;
+	int vert_count = 0;
+
+	for (x = 0; x < width; ++x)
+	{
+		for (y = 0; y <= height; ++y)
+		{
+			unsigned char pixel = y < height ? pixels[y * pitch + x] : 1;
+
+			if (!(pixel & 0xBF))
+				++vert_count;
+			if ((pixel & 0xBF) && vert_count)
+			{
+				printf("\\fill (%d, -%d) rectangle ++(1, -%d);\n",
+						x, y - vert_count, vert_count);
+				vert_count = 0;
+			}
+		}
+	}
+}
+
 int process(SDL_Surface* input)
 {
 	SDL_PixelFormat nicepf = {
@@ -84,10 +108,19 @@ int process(SDL_Surface* input)
 		return 1;
 	}
 
-	if (!horiz_join)
-		output_pgf(image->pixels, image->w, image->h, image->pitch);
+	if (!vert_join)
+	{
+		if (!horiz_join)
+			output_pgf(image->pixels, image->w, image->h, image->pitch);
+		else
+			output_pgf_horizjoin(image->pixels, image->w, image->h, image->pitch);
+	}
 	else
-		output_pgf_horizjoin(image->pixels, image->w, image->h, image->pitch);
+	{
+		output_pgf_vertjoin(image->pixels, image->w, image->h, image->pitch);
+		if (horiz_join)
+			output_pgf_horizjoin(image->pixels, image->w, image->h, image->pitch);
+	}
 
 	SDL_FreeSurface(image);
 	return 0;
@@ -95,6 +128,7 @@ int process(SDL_Surface* input)
 
 const struct option long_opts[] = {
 	{ "horizontal-join", no_argument, 0, 'h' },
+	{ "vertical-join", no_argument, 0, 'v' },
 
 	{ "help", no_argument, 0, 'H' },
 	{ "version", no_argument, 0, 'V' },
@@ -112,6 +146,7 @@ void print_help(FILE* f, const char* self)
 "\n"
 "Options:\n"
 "	-h, --horiz	join adjacent pixels horizontally\n"
+"	-v, --vert	join adjacent pixels vertically\n"
 "\n"
 "	--help		output this help message\n"
 "	--version	output program version\n",
@@ -122,12 +157,15 @@ int main(int argc, char* argv[])
 {
 	int opt, ret;
 
-	while ((opt = getopt_long(argc, argv, "hHV", long_opts, NULL)) != -1)
+	while ((opt = getopt_long(argc, argv, "hvHV", long_opts, NULL)) != -1)
 	{
 		switch (opt)
 		{
 			case 'h':
 				horiz_join = 1;
+				break;
+			case 'v':
+				vert_join = 1;
 				break;
 
 			case 'V':
