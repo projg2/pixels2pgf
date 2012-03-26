@@ -3,7 +3,12 @@
  * Released under the terms of the 2-clause BSD license
  */
 
+#ifdef HAVE_CONFIG_H
+#	include "config.h"
+#endif
+
 #include <stdio.h>
+#include <getopt.h>
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -60,13 +65,50 @@ int process(SDL_Surface* input)
 	return 0;
 }
 
+const struct option long_opts[] = {
+	{ "help", no_argument, 0, 'h' },
+	{ "version", no_argument, 0, 'V' },
+
+	{ 0, 0, 0, 0 }
+};
+
+void print_help(FILE* f, const char* self)
+{
+	fprintf(f, ""
+"Usage: %s [options] <input-file>\n"
+"\n"
+"Convert image in <input-file> to pixel-perfect rectangles for PGF/Tikz.\n"
+"Outputs to stdout.\n"
+"\n"
+"Options:\n"
+"	--help		output this help message\n"
+"	--version	output program version\n",
+			self);
+}
+
 int main(int argc, char* argv[])
 {
-	int ret;
+	int opt, ret;
 
-	if (argc != 2)
+	while ((opt = getopt_long(argc, argv, "hV", long_opts, NULL)) != -1)
 	{
-		fprintf(stderr, "Usage: %s <file>\n", argv[0]);
+		switch (opt)
+		{
+			case 'V':
+				printf("%s-%s\n", PACKAGE_NAME, PACKAGE_VERSION);
+				return 0;
+			case 'h':
+				print_help(stdout, argv[0]);
+				return 0;
+			default:
+				print_help(stderr, argv[0]);
+				return 1;
+		}
+	}
+
+	if (argc - optind != 1)
+	{
+		print_help(stderr, argv[0]);
 		return 1;
 	}
 
@@ -77,7 +119,7 @@ int main(int argc, char* argv[])
 	}
 	IMG_Init(0);
 
-	ret = process(IMG_Load(argv[1]));
+	ret = process(IMG_Load(argv[optind]));
 
 	IMG_Quit();
 	SDL_Quit();
