@@ -1,0 +1,58 @@
+pixels2pgf
+-----------------------------
+
+pixels2pgf is a very simple tool which reads a single image file
+and outputs PGF/Tikz commands which resemble the picture pixel-by-pixel,
+using rectangles.
+
+The output is very simple right now. By default, every pixel is
+represented by a single 1x1 rectangle. You are likely to notice tiny
+white borders between pixels, and you may either like it or not.
+
+If you want pixels to occupy that space as well, you can replace `\fill`
+instructions with `\filldraw` but that has its visual drawbacks too.
+Antialiasing seems to be the problem here.
+
+You can also use `--horiz` or `--vert` to represent adjoining pixels by
+wide horizontal or vertical rectangles. The former one resembles
+interlacing a little.
+
+If you use both, both horizontal and vertical rectangles will be created
+for _all_ pixels. That means, the same pixels will be represented twice.
+That's usually not what you want to achieve.
+
+Creating two-dimensional rectangles from adjoining pixels hasn't been
+implemented yet. Feel free to send me a patch.
+
+
+Use example
+-----------------------------
+
+An example use case for pixels2pgf is embedding QRCode in Beamer
+presentation. First, you create QRCode image file using some tool:
+
+	qrencode -s 1 -m 0 -o test.png test
+
+We use `-s 1` here to output 1 dot-per-pixel image. pixels2pgf usually
+outputs one rectangle for every black pixel on the image, so keeping
+the number of pixels small is usually a good idea.
+
+You should also try to use lossless image formats. Using JPEG is likely
+to blur the image, and make pixels2pgf likely to read it badly.
+
+Afterwards, you can use pixels2pgf to convert the image into PGF/Tikz
+commands:
+
+	pixels2pgf test.png > test.pgf
+
+The resulting file you can embed into any PGF/Tikz drawing using
+`\input`. For example:
+
+	\tikz[x=1mm,y=1mm]{\input{test.pgf}}
+
+Make sure you set the right scale. You can also experiment with
+`--horiz` and `--vert` options, and choose the look you like best.
+
+-------------------------------
+(c) 2012 Michał Górny
+2-clause BSD-licensed
